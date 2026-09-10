@@ -2,10 +2,10 @@
 
 ## Phase 1 — Application foundations
 
-* [ ] Define the domain
-* [ ] Create Spring Boot backend
+* [x] Define the domain
+* [x] Create Spring Boot backend
+* [x] Create initial REST API
 * [ ] Create Angular frontend
-* [ ] Create REST API
 * [ ] Connect Angular with backend
 * [ ] Introduce PostgreSQL
 * [ ] Implement basic CRUD (Create, Read, Update, Delete)
