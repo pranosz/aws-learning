@@ -172,7 +172,7 @@ Returning every race in one response does not scale well and makes the API ineff
 
 Pagination limits the amount of data returned in a single request.
 
-The exact implementation will be decided when PostgreSQL and the Repository layer are introduced.
+The exact implementation will be decided when the querying requirements are introduced.
 
 ---
 
@@ -208,7 +208,7 @@ The decision can be revisited if the domain later requires stricter precision ru
 
 ### Decision
 
-The backend will evolve toward:
+The backend uses:
 
 ```text
 Controller
@@ -228,6 +228,113 @@ The layers provide separate responsibilities:
 * Service — application/business logic
 * Repository — persistence/data access
 
-The goal is to understand this professional architectural pattern while avoiding unnecessary abstractions inside each layer.
+The project deliberately avoids adding abstractions that do not solve a real problem.
 
-The Service and Repository layers have not yet been implemented.
+---
+
+## Decision 9 — PostgreSQL is the local persistence mechanism
+
+### Decision
+
+PostgreSQL is the persistence layer for the backend instead of an in-memory repository.
+
+### Reason
+
+The project is intended to teach real application persistence and the path toward a managed database on AWS.
+
+Using PostgreSQL locally makes it possible to learn database schema design, SQL, JPA, transactions, indexing and later RDS without changing the fundamental application model.
+
+The previous `InMemoryRaceRepository` was useful during the initial learning stage but was removed once persistence was introduced.
+
+---
+
+## Decision 10 — Use Spring Data JPA for repository persistence
+
+### Decision
+
+`RaceRepository` extends:
+
+```java
+JpaRepository<Race, Long>
+```
+
+### Reason
+
+Spring Data JPA provides standard persistence operations without requiring boilerplate repository implementations.
+
+This is appropriate for the current application and keeps the Repository layer simple.
+
+More complex query requirements will be evaluated when search, filtering and pagination are implemented.
+
+---
+
+## Decision 11 — Use Flyway for database schema migrations
+
+### Decision
+
+Database schema changes are managed through versioned Flyway migrations.
+
+Current migrations:
+
+```text
+V1__create_races_table.sql
+V2__insert_initial_races.sql
+```
+
+### Reason
+
+Database schema should be reproducible, versioned and reviewable through source control.
+
+Manual changes in pgAdmin are not a substitute for migration scripts in the project.
+
+Flyway allows the same schema changes to be applied consistently in development and later in deployment environments.
+
+---
+
+## Decision 12 — Do not hardcode database passwords
+
+### Decision
+
+The PostgreSQL password is supplied through an environment variable:
+
+```properties
+spring.datasource.password=${DB_PASSWORD}
+```
+
+The actual password is not stored in `application.properties` or source control.
+
+### Reason
+
+Credentials are secrets and should not be committed to the repository.
+
+This approach also provides a path toward proper secret management when the application moves to AWS.
+
+The exact AWS secret-management mechanism will be decided when cloud deployment is introduced.
+
+---
+
+## Decision 13 — Security and engineering quality are project requirements
+
+### Decision
+
+The application will not be developed using a "make it work at any cost" approach.
+
+Implementation choices should follow good engineering practices appropriate for a real application, with security considered from the beginning.
+
+### Principles
+
+* do not hardcode secrets
+* avoid unnecessary exposure of services and network resources
+* use least-privilege access where applicable
+* validate and handle external input deliberately
+* consider authentication and authorization before exposing protected functionality
+* use secure secret management for cloud deployment
+* prefer maintainable and testable solutions
+* document important security and architecture decisions
+* do not introduce enterprise complexity without a reason
+
+### Reason
+
+The purpose of the project is not only to make a working application. It is to learn how a professional application can be designed, implemented and operated safely.
+
+---

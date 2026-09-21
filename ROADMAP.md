@@ -5,11 +5,16 @@
 * [x] Define the domain
 * [x] Create Spring Boot backend
 * [x] Create initial REST API
+* [x] Introduce Controller → Service → Repository structure
+* [x] Introduce PostgreSQL
+* [x] Introduce JPA / Spring Data JPA
+* [x] Introduce Flyway database migrations
+* [x] Add initial database data through a migration
+* [x] Verify API reads data from PostgreSQL
 * [ ] Create Angular frontend
 * [ ] Connect Angular with backend
-* [ ] Introduce PostgreSQL
 * [ ] Implement basic CRUD (Create, Read, Update, Delete)
-* [ ] Add automated tests
+* [ ] Add meaningful automated tests
 
 ## Phase 2 — Architecture fundamentals
 
@@ -148,15 +153,30 @@ For Angular and Java code:
 * avoid unnecessary abstractions
 * use design patterns only when they solve a real problem
 
-### Architecture
+### Architecture and Engineering Quality
 
-For architecture:
+The project is intentionally not developed using a "make it work at any cost" approach.
 
-* learn professional patterns used by larger organizations
-* understand why components exist
-* understand trade-offs
-* compare alternatives
+The goal is to learn how real applications are designed and built in professional engineering environments.
+
+Therefore:
+
+* security is considered from the beginning
+* secrets are not hardcoded
+* access should follow least-privilege principles where applicable
+* unnecessary network exposure should be avoided
+* architectural decisions should have a clear reason
+* alternatives and trade-offs should be considered
+* maintainability and testability matter
+* enterprise complexity should not be introduced without a real reason
+
+### Cost
+
+For AWS and infrastructure:
+
 * explicitly consider cost
-* prefer the cheapest solution that still allows us to learn the target concept
+* compare cheaper alternatives
+* understand the trade-offs
+* prefer the cheapest solution that still provides sound security and teaches the intended concept
 
-The architecture may therefore be more sophisticated than strictly necessary for the application itself.
+The architecture may therefore be more sophisticated than strictly necessary for the application itself, but every additional component should have a clear learning or engineering reason.

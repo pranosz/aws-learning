@@ -4,55 +4,59 @@
 
 Trail Races — educational mountain running race platform.
 
+The project is being used as a practical learning environment for Java, Spring Boot, PostgreSQL, AWS, architecture, security, Docker and CI/CD.
+
 ## Current Phase
 
 Phase 1 — Application foundations
 
 ## Current Lesson
 
-Spring Boot REST API and basic backend structure.
+Spring Boot REST API, layered backend architecture, JPA, PostgreSQL and database migrations with Flyway.
 
 ## Current Goal
 
-Introduce a Service layer and understand the responsibility of the Controller, Service and Repository layers before implementing the next backend step.
+Build the backend incrementally while understanding each architectural layer and using professional engineering and security practices rather than shortcuts whose only purpose is to make the application run.
 
-## Current Architecture
-
-The current local architecture is still simple:
+## Current Local Architecture
 
 ```text
 Client
    ↓
-Spring Boot Controller
+RaceController
    ↓
-Race data
+RaceService
+   ↓
+RaceRepository
+   ↓
+Spring Data JPA / Hibernate
+   ↓
+PostgreSQL
 ```
 
-The backend currently contains:
+Database schema management:
+
+```text
+Flyway
+   ↓
+PostgreSQL schema
+```
+
+## Backend Structure
+
+The current backend contains:
 
 ```text
 com.trailraces
 ├── TrailRacesApplication.java
 └── race
     ├── Race.java
-    └── RaceController.java
+    ├── RaceController.java
+    ├── RaceRepository.java
+    └── RaceService.java
 ```
 
-The next backend step is to evolve the structure toward:
-
-```text
-Client
-   ↓
-Controller
-   ↓
-Service
-   ↓
-Repository
-   ↓
-PostgreSQL
-```
-
-The Service and Repository layers have not yet been implemented.
+The previous `InMemoryRaceRepository` has been removed after introducing PostgreSQL persistence.
 
 ## Backend
 
@@ -62,34 +66,84 @@ The Service and Repository layers have not yet been implemented.
 * Packaging: Jar
 * Group: `com.trailraces`
 * Artifact: `trail-races`
-* Package: `com.trailraces`
-* Dependency currently used: Spring Web
 
-The Java version in the Maven project was changed from 25 to 21 because the local environment uses Java 21.
+Current dependencies include:
 
-The initial Maven build failed with:
+* Spring Web MVC
+* Spring Data JPA
+* PostgreSQL JDBC driver
+* Spring Boot Flyway starter
+* Flyway PostgreSQL database support
+
+## Database
+
+PostgreSQL is now implemented locally.
+
+Current database:
 
 ```text
-Fatal error compiling: error: release version 25 not supported
+trail_races
 ```
 
-After changing the configured Java version to 21, the application builds and runs successfully.
+The local PostgreSQL version observed during application startup is 15.5.
 
-## Current API
+The application connects using:
 
-The backend currently exposes:
-
-```http
-GET /api/races
+```text
+jdbc:postgresql://localhost:5432/trail_races
 ```
 
-The endpoint currently returns two in-memory `Race` objects.
+The database password is not stored directly in source configuration. The application uses:
 
-The root URL `/` currently has no controller mapping, so Spring Boot returns its default Whitelabel 404 response.
+```properties
+spring.datasource.password=${DB_PASSWORD}
+```
 
-## Race Model
+The actual password is supplied through the `DB_PASSWORD` environment variable.
 
-The current `Race` model contains:
+## Flyway
+
+Flyway is now used for database schema migrations.
+
+Current migrations:
+
+```text
+V1__create_races_table.sql
+V2__insert_initial_races.sql
+```
+
+`V1` creates the `races` table.
+
+`V2` inserts three initial race records.
+
+Flyway maintains:
+
+```text
+flyway_schema_history
+```
+
+The application startup log confirms that both migrations are validated and that the schema is up to date.
+
+## Race Entity
+
+`Race` is now a JPA entity:
+
+```java
+@Entity
+@Table(name = "races")
+```
+
+The primary key uses generated identity values:
+
+```java
+@Id
+@GeneratedValue(strategy = GenerationType.IDENTITY)
+private Long id;
+```
+
+The entity has a no-argument constructor required by JPA/Hibernate and a parameterized constructor for normal application use.
+
+Current fields:
 
 * `id`
 * `name`
@@ -112,11 +166,56 @@ Current Java types:
 * `LocalDate` for `date`
 * `BigDecimal` for `price`
 
-There are currently no JPA (Jakarta Persistence API) annotations.
+## Repository
 
-## API Requirements
+`RaceRepository` is now a Spring Data JPA repository:
 
-The MVP (Minimum Viable Product) API should support:
+```java
+public interface RaceRepository extends JpaRepository<Race, Long> {
+}
+```
+
+Spring Data provides the repository implementation automatically.
+
+The application no longer uses an in-memory repository.
+
+## Service
+
+`RaceService` is implemented and annotated with `@Service`.
+
+It receives `RaceRepository` through constructor injection and currently provides:
+
+```text
+getAllRaces()
+```
+
+which delegates to `raceRepository.findAll()`.
+
+## API
+
+The backend currently exposes:
+
+```http
+GET /api/races
+```
+
+The endpoint now reads records from PostgreSQL and returns the race data as JSON.
+
+The endpoint has been manually verified locally after introducing JPA and Flyway.
+
+## Initial Data
+
+The current Flyway `V2` migration inserts three example races:
+
+* Tatra Sky Marathon
+* Beskid Ultra Trail
+* Alpine Trail Run
+
+These are development/learning data, not production race data.
+
+## MVP API Requirements
+
+The MVP API should support:
 
 * list of races
 * one text search
@@ -160,22 +259,6 @@ GET /api/races?distanceFrom=20&distanceTo=50
 GET /api/races?search=tatry&distanceFrom=20&distanceTo=50&page=1&size=20
 ```
 
-The intended semantics are:
-
-```text
-(
-    name contains search
-    OR location contains search
-    OR currency contains search
-    OR description contains search
-    OR websiteUrl contains search
-)
-AND
-distance >= distanceFrom
-AND
-distance <= distanceTo
-```
-
 ### Pagination
 
 The planned response is:
@@ -216,24 +299,22 @@ Planned frontend technology:
 * BEM (Block Element Modifier)
 * Signal Store
 
-## Database
-
-PostgreSQL is planned but has not been introduced yet.
-
 ## AWS
 
 An AWS account exists.
 
 No AWS infrastructure has been created yet.
 
-## Infrastructure
+Planned infrastructure includes:
 
-No Infrastructure as Code has been created yet.
-
-Planned technology:
-
-* AWS CDK (Cloud Development Kit)
+* AWS CDK
 * Docker
+* AWS networking
+* container deployment
+* managed PostgreSQL
+* frontend hosting
+* gateway/load balancing
+* CI/CD
 
 ## CI/CD
 
@@ -243,43 +324,82 @@ Planned technology:
 
 * GitHub Actions
 
+## Security Status
+
+Security is treated as a first-class project requirement.
+
+Current security-related practice:
+
+* database password is supplied through `DB_PASSWORD`
+* the password is not stored in `application.properties`
+* secrets should not be committed to Git
+* production secret management will be addressed before cloud deployment
+* network exposure and access permissions will be designed deliberately rather than opened for convenience
+
+## Engineering Approach
+
+The project is intentionally **not developed using a "byleby coś odpalić" / "make it work at any cost" approach**.
+
+The target is to learn how a real engineering team would build the application:
+
+* use good practices appropriate to the problem
+* keep the code simple, but not careless
+* introduce abstractions only when they solve a real problem
+* consider security from the beginning
+* avoid hardcoded secrets
+* understand trade-offs before selecting infrastructure or architectural components
+* prefer maintainable and testable solutions
+* document important architectural decisions
+* keep AWS costs under control
+
+The fact that this is a learning project does not mean that security and engineering quality should be ignored.
+
 ## What I Understand
 
-* The project will be built incrementally.
-* Spring Boot controllers can expose HTTP endpoints.
-* `@RestController` is used for REST (Representational State Transfer) controllers.
+* Spring Boot can expose REST endpoints.
+* `@RestController` is used for REST controllers.
 * `@GetMapping` maps a GET request to a controller method.
-* The application currently exposes `GET /api/races`.
-* Search should be separate from numerical distance filtering.
-* Distance filtering should use `distanceFrom` and `distanceTo`.
-* The architecture will evolve from a simple application toward a layered backend.
-* AWS architecture will be introduced after understanding the local application.
-* Architecture should reflect professional patterns.
-* Infrastructure costs should be minimized.
+* A Controller should focus on HTTP/API concerns.
+* A Service can coordinate application operations and business logic.
+* A Repository is responsible for persistence/data access.
+* Constructor injection can be used to provide dependencies.
+* Spring Data JPA can provide repository implementations automatically.
+* JPA entities map Java objects to database tables.
+* Hibernate is used by Spring Data JPA for ORM (Object-Relational Mapping).
+* JPA/Hibernate requires a no-argument constructor for the entity.
+* Flyway manages versioned database migrations.
+* PostgreSQL now stores the application data locally.
+* Database passwords should not be hardcoded in source configuration.
 
 ## What I Don't Understand Yet
 
-* Exact responsibilities of Controller, Service and Repository layers.
-* How the Service layer should be introduced without unnecessary abstraction.
-* How Repository interacts with PostgreSQL.
-* How Spring Data handles database queries.
-* How API filtering and pagination will be implemented with PostgreSQL.
-* How the local architecture will evolve toward the AWS architecture.
+* How Spring Data derives or executes more complex repository queries.
+* How API filtering and pagination should be implemented efficiently with PostgreSQL.
+* How transactions should be used in the application.
+* How validation should be implemented at the API boundary.
+* How API errors should be represented consistently.
+* How indexes affect PostgreSQL query performance.
+* How the local architecture should evolve toward the AWS architecture.
+* How authentication and authorization should be introduced securely.
+* How secrets should be managed in AWS.
+* How network access should be restricted in AWS.
 
-## Open Questions
+## Known Technical Follow-up
 
-* What should belong in the Controller and what should belong in the Service?
-* When is a Repository abstraction useful?
-* How should search across multiple String fields be implemented?
-* How should pagination be represented in the final API contract?
-* Which AWS gateway architecture should be selected later?
+Spring Boot currently reports that `spring.jpa.open-in-view` is enabled by default.
+
+This warning has not been addressed yet. It should be evaluated deliberately rather than changed simply to remove the warning.
 
 ## Next Step
 
-Before changing the code, learn and understand the responsibilities of:
+Continue developing the backend incrementally. The next functional area is the MVP race querying capability:
 
 ```text
-Controller → Service → Repository
+search
+   +
+distanceFrom / distanceTo
+   +
+pagination
 ```
 
-Then introduce the Service layer into the Trail Races backend.
+The implementation should be introduced step by step and should use the database appropriately rather than loading all data into application memory.

@@ -1,6 +1,6 @@
 # Trail Races — Learning Project
 
-Educational project for learning software architecture, Java, Spring Boot, Angular, AWS, infrastructure and CI/CD.
+Educational project for learning software architecture, Java, Spring Boot, Angular, AWS, infrastructure, security and CI/CD.
 
 ## Project
 
@@ -21,7 +21,7 @@ The application will provide information about races, including:
 * description
 * website
 
-The application will be developed incrementally, starting from a simple local application and evolving toward a professional cloud architecture.
+The application is being developed incrementally, starting from a simple local application and evolving toward a professional cloud architecture.
 
 ## Technology
 
@@ -35,13 +35,16 @@ The application will be developed incrementally, starting from a simple local ap
 
 ### Backend
 
-* Java
-* Spring Boot
+* Java 21
+* Spring Boot 4.1.1
 * Maven
+* Spring Data JPA
+* Hibernate
 
 ### Database
 
 * PostgreSQL
+* Flyway
 
 ### Infrastructure
 
@@ -71,14 +74,55 @@ The main goal is not only to build the application, but to understand:
 * scalability
 * observability
 * architectural decision-making
+* database persistence and migrations
 
 The architecture should reflect professional patterns used in larger organizations where appropriate, while keeping infrastructure costs as low as reasonably possible for a learning project.
+
+## Engineering and Security Principles
+
+This project is **not a "make it work at any cost" project**.
+
+The goal is to learn how a real application is designed, implemented and operated in a professional engineering environment.
+
+The implementation should therefore:
+
+* follow good engineering practices
+* consider security from the beginning
+* never hardcode secrets
+* use appropriate access control and least privilege
+* avoid unnecessary network exposure
+* validate and handle external input deliberately
+* prefer maintainable and testable solutions
+* document important architecture and security decisions
+* evaluate alternatives and trade-offs
+* avoid unnecessary enterprise complexity
+* keep AWS costs under control
+
+Security is not something that will be added only at the end of the course. Security considerations should influence decisions throughout the project, especially when introducing databases, networking, authentication, secrets and AWS infrastructure.
 
 ## Learning Approach
 
 The project is the practical learning environment.
 
 The application will be developed incrementally and each implementation step should be used to understand the architectural concepts behind it.
+
+A typical learning cycle is:
+
+```text
+Understand the reason
+        ↓
+Make one small change
+        ↓
+Run tests / application
+        ↓
+Verify the result
+        ↓
+Understand what happened
+        ↓
+Document the durable knowledge
+        ↓
+Continue
+```
 
 Programming should follow:
 
@@ -90,6 +134,43 @@ Programming should follow:
 Architecture should focus on professional patterns, trade-offs and the reasons behind architectural decisions.
 
 For AWS and infrastructure, cost should always be considered. When a solution introduces cost, cheaper alternatives and their trade-offs should be discussed.
+
+## Current Backend State
+
+The local backend currently follows:
+
+```text
+Client
+   ↓
+RaceController
+   ↓
+RaceService
+   ↓
+RaceRepository
+   ↓
+Spring Data JPA / Hibernate
+   ↓
+PostgreSQL
+```
+
+Database schema is managed by Flyway migrations.
+
+Current migrations:
+
+```text
+V1__create_races_table.sql
+V2__insert_initial_races.sql
+```
+
+The current API is:
+
+```http
+GET /api/races
+```
+
+The endpoint reads race data from PostgreSQL.
+
+The database password is supplied through the `DB_PASSWORD` environment variable and is not stored in `application.properties`.
 
 ## Documentation Workflow
 
@@ -178,8 +259,10 @@ The detailed API semantics are documented in `KNOWLEDGE.md` and `DECISIONS.md`.
 
 * Java 21
 * Maven
+* PostgreSQL
+* `DB_PASSWORD` environment variable configured for the local PostgreSQL user
 
-The current Spring Boot version is 4.1.1.
+The project includes Maven Wrapper, so Maven does not need to be installed separately.
 
 ### Windows
 

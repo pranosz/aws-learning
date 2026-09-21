@@ -2,103 +2,164 @@
 
 ## Current Local Architecture
 
-The application is currently a simple Spring Boot backend.
+The backend now uses a layered Spring Boot architecture with PostgreSQL persistence:
 
 ```text
 Client
-   ↓
-Spring Boot
    ↓
 RaceController
    ↓
-In-memory Race objects
-```
-
-The current implementation does not use a database.
-
-## Planned Local Backend Architecture
-
-The backend will evolve toward a layered structure:
-
-```text
-Client
+RaceService
    ↓
-Controller
+RaceRepository
    ↓
-Service
-   ↓
-Repository
+Spring Data JPA / Hibernate
    ↓
 PostgreSQL
 ```
+
+Database schema changes are managed by Flyway:
+
+```text
+Flyway
+   ↓
+PostgreSQL schema
+```
+
+The current API endpoint is:
+
+```http
+GET /api/races
+```
+
+It currently reads race records from the `races` table in PostgreSQL.
+
+## Current Backend Responsibilities
 
 ### Controller
 
-The Controller is responsible for handling HTTP (Hypertext Transfer Protocol) requests and responses.
+`RaceController` is responsible for the HTTP/API boundary.
 
-It should deal with API concerns such as:
+Current responsibility:
 
-* request parameters
-* request validation
-* HTTP responses
-* mapping requests to application operations
+* expose `GET /api/races`
+* delegate the operation to `RaceService`
+* return the result as an HTTP response
 
-The Controller should not contain the main business logic.
+The Controller should not contain database access or the main business logic.
 
 ### Service
 
-The Service represents the application/business logic.
+`RaceService` represents the application/service layer.
 
-It should coordinate operations such as:
+Current responsibility:
 
-* retrieving races
-* applying business rules
-* combining filtering criteria
-* coordinating repositories or other services
+* coordinate retrieval of races
+* call `RaceRepository`
 
-The Service should not be responsible for HTTP-specific details.
+As business rules are introduced, they should be placed here when they belong to the application/service layer rather than the HTTP or persistence layers.
 
 ### Repository
 
-The Repository is responsible for access to persistent data.
+`RaceRepository` extends Spring Data JPA's `JpaRepository<Race, Long>`.
 
-Later it will communicate with PostgreSQL.
+Current responsibility:
 
-The Repository should hide database-access details from the Service.
+* provide persistence operations for `Race`
+* delegate database access to Spring Data JPA/Hibernate
+
+The previous `InMemoryRaceRepository` implementation has been removed because PostgreSQL is now the persistence mechanism.
+
+## Database Architecture
+
+The application uses PostgreSQL locally.
+
+The database schema is managed by Flyway rather than being created manually or relying on Hibernate to change the schema automatically.
+
+Current migrations:
+
+```text
+V1__create_races_table.sql
+    ↓
+creates races table
+
+V2__insert_initial_races.sql
+    ↓
+inserts initial race data
+```
+
+Flyway also maintains:
+
+```text
+flyway_schema_history
+```
+
+which records applied migrations.
+
+## Entity Mapping
+
+`Race` is a JPA entity mapped to the PostgreSQL `races` table.
+
+```text
+Race Java entity
+      ↕
+Hibernate / JPA
+      ↕
+races PostgreSQL table
+```
+
+The entity contains a no-argument constructor required by JPA/Hibernate and a parameterized constructor for normal application use.
 
 ## API Flow
 
-For a request such as:
-
-```http
-GET /api/races?search=tatry&distanceFrom=20&distanceTo=50&page=1&size=20
-```
-
-the intended flow is:
+For the current request:
 
 ```text
-HTTP request
-     ↓
+HTTP GET /api/races
+        ↓
 RaceController
-     ↓
+        ↓
 RaceService
-     ↓
+        ↓
 RaceRepository
-     ↓
+        ↓
+Spring Data JPA
+        ↓
+Hibernate
+        ↓
 PostgreSQL
-     ↓
-RaceRepository
-     ↓
-RaceService
-     ↓
-RaceController
-     ↓
+        ↓
+Race objects
+        ↓
 HTTP response
 ```
 
+## Security Principles
+
+Security is a project requirement from the beginning, not a later add-on.
+
+In particular:
+
+* secrets must not be hardcoded in source code
+* database passwords are supplied through environment variables
+* sensitive configuration should be separated from application source code
+* database access should use the minimum required permissions when the deployment architecture is introduced
+* network access should be restricted rather than exposed unnecessarily
+* authentication and authorization will be introduced deliberately when the application requires them
+* production infrastructure should use managed secret storage where appropriate
+* security decisions should be documented together with architectural trade-offs
+
+The local configuration currently uses:
+
+```properties
+spring.datasource.password=${DB_PASSWORD}
+```
+
+The actual database password is therefore not stored in `application.properties`.
+
 ## Target Cloud Architecture
 
-The final architecture is expected to evolve toward a professional AWS (Amazon Web Services) architecture.
+The final architecture is expected to evolve toward a professional AWS architecture.
 
 The exact architecture has not yet been selected.
 
@@ -127,8 +188,8 @@ Possible approaches include:
 The final choice will be based on:
 
 * architectural requirements
-* scalability
 * security
+* scalability
 * operational complexity
 * cost
 * what concept the architecture is intended to teach
@@ -144,12 +205,29 @@ Use:
 
 Avoid abstractions that do not solve a real problem.
 
-### Architecture
+### Architecture and Engineering Quality
+
+The project is intentionally **not developed using a "make it work at any cost" approach**.
+
+Each implementation should aim to reflect how a real application would be built in a professional engineering environment, while keeping the scope appropriate for a learning project.
+
+This means:
+
+* prefer established and understandable patterns
+* understand why a component exists before introducing it
+* consider maintainability and testability
+* consider security from the beginning
+* avoid shortcuts that create technical debt without a clear reason
+* evaluate alternatives and trade-offs
+* do not introduce complexity only for the sake of looking enterprise-like
+* keep the implementation as simple as possible without compromising sound engineering practices
 
 Architecture may be more sophisticated than strictly necessary for this application when the additional complexity teaches an important professional concept.
 
 Every architectural component should have a clear reason for existing.
 
-Alternatives and trade-offs should be considered before selecting a solution.
+### Cost
 
-AWS infrastructure costs should be kept as low as reasonably possible.
+AWS infrastructure costs should be kept as low as reasonably possible for a learning project.
+
+When a solution introduces additional cost, cheaper alternatives and their trade-offs should be considered.
