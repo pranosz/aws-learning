@@ -11,10 +11,26 @@
 * [x] Introduce Flyway database migrations
 * [x] Add initial database data through a migration
 * [x] Verify API reads data from PostgreSQL
-* [ ] Create Angular frontend
+* [x] Create Angular frontend
 * [ ] Connect Angular with backend
 * [ ] Implement basic CRUD (Create, Read, Update, Delete)
 * [ ] Add meaningful automated tests
+
+### Frontend baseline
+
+The Angular frontend has been created as part of Phase 1. The current baseline is:
+
+* Angular 22.2.0
+* Angular Material 22.2.0
+* SCSS (Sassy Cascading Style Sheets)
+* BEM (Block Element Modifier)
+* standalone Angular components
+* strict TypeScript configuration
+* Vitest for unit tests
+* SSR (Server-Side Rendering) and SSG (Static Site Generation) disabled for the initial application
+* feature-based code organization following the current Angular Style Guide
+
+The next frontend work is to connect the Angular application to the existing Spring Boot API.
 
 ## Phase 2 — Architecture fundamentals
 

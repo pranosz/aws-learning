@@ -338,3 +338,60 @@ Implementation choices should follow good engineering practices appropriate for 
 The purpose of the project is not only to make a working application. It is to learn how a professional application can be designed, implemented and operated safely.
 
 ---
+
+
+## Decision 14 — Follow the current Angular Style Guide for frontend structure
+
+### Decision
+
+The Angular frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions.
+
+The frontend is organized by feature area rather than by generic technical folders. Related files for a component remain together. The current `races` feature is structured as:
+
+```text
+src/app/
+└── races/
+    └── race-list/
+        ├── race-list.ts
+        ├── race-list.html
+        ├── race-list.scss
+        └── race-list.spec.ts
+```
+
+The project uses the current Angular file naming convention, standalone components and strict TypeScript configuration.
+
+Dependency injection should use Angular's `inject()` function when a dependency needs to be injected.
+
+Route components should use lazy loading where appropriate.
+
+### Reason
+
+The project is intended to learn current Angular practices rather than preserve structures from older Angular versions. Feature-based organization keeps related code together and avoids creating empty architectural categories before they are needed.
+
+The project also follows KISS (Keep It Simple, Stupid) and DRY (Don't Repeat Yourself): state management, additional layers and abstractions should be introduced only when they solve a real problem.
+
+---
+
+## Decision 15 — Use Angular Material and SCSS/BEM for the initial frontend UI
+
+### Decision
+
+The frontend uses Angular Material for common UI components and SCSS with BEM (Block Element Modifier) naming for project-specific styling.
+
+Tailwind CSS is not part of the initial frontend stack.
+
+### Reason
+
+Angular Material provides accessible Angular UI components that integrate directly with the Angular application. SCSS and BEM provide a predictable approach for project-specific styling while keeping the initial frontend simple.
+
+---
+
+## Decision 16 — Do not introduce Signal Store before a real state requirement exists
+
+### Decision
+
+Signal Store is planned for the frontend, but it will not be introduced during initial application setup. It will be added when the application has a concrete state-management requirement that justifies it.
+
+### Reason
+
+Adding state management before the application has state that needs centralized coordination would add complexity without a demonstrated benefit. The initial race-list flow can first be implemented with Angular's built-in mechanisms and then evaluated as the feature grows.

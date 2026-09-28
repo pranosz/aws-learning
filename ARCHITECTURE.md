@@ -34,6 +34,56 @@ GET /api/races
 
 It currently reads race records from the `races` table in PostgreSQL.
 
+## Current Frontend Architecture
+
+The Angular frontend is being organized by feature area rather than by generic technical folders. The current target structure is:
+
+```text
+src/app/
+├── races/
+│   └── race-list/
+│       ├── race-list.ts
+│       ├── race-list.html
+│       ├── race-list.scss
+│       └── race-list.spec.ts
+├── app.ts
+├── app.html
+├── app.scss
+├── app.config.ts
+├── app.routes.ts
+└── app.spec.ts
+```
+
+The application shell owns global navigation and the router outlet. The `races` feature owns race-related UI and, as the feature grows, its related API and state code.
+
+Route components should be lazy-loaded where appropriate. The initial `/races` route is intended to load the race-list component lazily.
+
+The frontend uses Angular Material for UI components and SCSS with BEM (Block Element Modifier) naming for project-specific styling.
+
+The current Angular Style Guide is the baseline for frontend organization and implementation decisions. The project avoids adding generic `components`, `services` or `directives` folders solely for categorization. It also avoids adding state-management or other abstractions before a real requirement exists.
+
+### Frontend → Backend boundary
+
+The intended application flow is:
+
+```text
+Angular feature
+      ↓
+Frontend API layer
+      ↓
+HTTP request
+      ↓
+Spring Boot Controller
+      ↓
+Service
+      ↓
+Repository
+      ↓
+PostgreSQL
+```
+
+The frontend should not contain backend persistence concerns. The HTTP/API boundary should remain explicit so that the frontend and backend can evolve independently.
+
 ## Current Backend Responsibilities
 
 ### Controller

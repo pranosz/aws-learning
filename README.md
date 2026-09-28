@@ -33,6 +33,27 @@ The application is being developed incrementally, starting from a simple local a
 * BEM (Block Element Modifier)
 * Signal Store
 
+Current frontend baseline:
+
+* Angular 22.2.0
+* Angular Material 22.2.0
+* TypeScript 6.0.3
+* RxJS 7.8.2
+* Vitest 5.0.2
+* Node.js 22.22.3
+
+The frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions. In particular:
+
+* organize code by feature areas rather than generic type-based folders
+* keep related component files together
+* use the current Angular file naming convention
+* keep one concept per file
+* prefer `inject()` for dependency injection
+* use lazy-loaded route components where appropriate
+* avoid adding abstractions, state management or architectural layers before they solve a real problem
+
+Signal Store is planned, but it will be introduced only when the application has a real state-management requirement.
+
 ### Backend
 
 * Java 21

@@ -12,11 +12,13 @@ Phase 1 — Application foundations
 
 ## Current Lesson
 
-Spring Boot REST API, layered backend architecture, JPA, PostgreSQL and database migrations with Flyway.
+Angular frontend foundations and integration with the existing Spring Boot REST API, following the current Angular Style Guide and the project's KISS/DRY principles.
+
+The backend foundation is already implemented with Spring Boot, JPA, PostgreSQL and Flyway.
 
 ## Current Goal
 
-Build the backend incrementally while understanding each architectural layer and using professional engineering and security practices rather than shortcuts whose only purpose is to make the application run.
+Build the frontend incrementally on top of the existing backend while understanding the architectural boundaries between the Angular application and the Spring Boot API. Use professional engineering and security practices rather than shortcuts whose only purpose is to make the application run.
 
 ## Current Local Architecture
 
@@ -289,15 +291,58 @@ the current model treats these as three `Race` records.
 
 ## Frontend
 
-Angular frontend has not been created yet.
+The Angular frontend has now been created and runs locally at:
 
-Planned frontend technology:
+```text
+http://localhost:4200/
+```
 
-* Angular
-* Angular Material
+Current frontend versions:
+
+* Angular: 22.2.0
+* Angular CLI: 22.2.0
+* Angular Material: 22.2.0
+* Angular CDK (Component Dev Kit): 22.2.0
+* Node.js: 22.22.3
+* npm: 10.9.8
+* TypeScript: 6.0.3
+* RxJS: 7.8.2
+* Vitest: 5.0.2
+
+Frontend configuration decisions:
+
+* standalone Angular components
+* strict TypeScript configuration
 * SCSS (Sassy Cascading Style Sheets)
-* BEM (Block Element Modifier)
-* Signal Store
+* BEM (Block Element Modifier) for component styling where appropriate
+* Angular Material for UI components
+* Vitest for unit tests
+* SSR (Server-Side Rendering) and SSG (Static Site Generation) disabled for the initial application
+* Angular AI integration generated configuration for OpenAI Codex
+
+The frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions. The planned structure is feature-based rather than organized into generic `components`, `services` or `directives` folders. Related component files and tests stay together.
+
+The current feature structure is being prepared as:
+
+```text
+src/app/
+├── races/
+│   └── race-list/
+│       ├── race-list.ts
+│       ├── race-list.html
+│       ├── race-list.scss
+│       └── race-list.spec.ts
+├── app.ts
+├── app.html
+├── app.scss
+├── app.config.ts
+├── app.routes.ts
+└── app.spec.ts
+```
+
+Signal Store is planned but has not been added yet. It will be introduced when a real application state-management requirement exists rather than being added in advance.
+
+The next frontend step is to connect the race list to the existing `GET /api/races` backend endpoint.
 
 ## AWS
 
@@ -392,14 +437,18 @@ This warning has not been addressed yet. It should be evaluated deliberately rat
 
 ## Next Step
 
-Continue developing the backend incrementally. The next functional area is the MVP race querying capability:
+Continue Phase 1 by connecting the Angular frontend to the existing backend API. The next functional flow is:
 
 ```text
-search
-   +
-distanceFrom / distanceTo
-   +
-pagination
+Angular RaceList
+      ↓
+HTTP (Hypertext Transfer Protocol) request
+      ↓
+GET /api/races
+      ↓
+Spring Boot
+      ↓
+PostgreSQL
 ```
 
-The implementation should be introduced step by step and should use the database appropriately rather than loading all data into application memory.
+The frontend should first consume the existing API before adding further state-management or architectural abstractions. After the basic integration works, the existing backend search, distance filtering and pagination capabilities will be connected to the frontend.

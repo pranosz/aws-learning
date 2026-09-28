@@ -507,3 +507,58 @@ Architecture should explicitly consider:
 * alternatives and trade-offs
 
 The cheapest solution is not automatically the correct solution if it introduces poor security or prevents learning the target concept. Likewise, an expensive or complex service should not be introduced only because it is common in large organizations.
+
+
+## Angular frontend foundations
+
+The frontend is built with Angular 22.2.0 and Angular Material 22.2.0. The current supporting versions are TypeScript 6.0.3, RxJS 7.8.2 and Vitest 5.0.2.
+
+The project uses standalone Angular components and strict TypeScript configuration. Server-Side Rendering (SSR) and Static Site Generation (SSG) are disabled for the initial application.
+
+### Angular Style Guide
+
+The current Angular Style Guide is used as the baseline for frontend structure and implementation. The main principles adopted by this project are:
+
+* organize code by feature areas
+* keep related files together
+* use the current Angular file naming convention
+* keep one concept per file
+* prefer `inject()` for dependency injection
+* lazy-load route components where appropriate
+* avoid abstractions that do not solve a real problem
+
+For the current `races` feature this means related component files and the test are kept together:
+
+```text
+races/
+└── race-list/
+    ├── race-list.ts
+    ├── race-list.html
+    ├── race-list.scss
+    └── race-list.spec.ts
+```
+
+### Why feature-based organization?
+
+A generic structure such as:
+
+```text
+components/
+services/
+models/
+directives/
+```
+
+can separate code that belongs to the same feature. Feature-based organization keeps related functionality together and makes the feature easier to find and evolve.
+
+The project therefore does not create generic technical folders simply because they are common in older Angular applications.
+
+### State management
+
+Signal Store is planned for the project, but it is not added during initial setup. State management should be introduced when the application has a concrete requirement for shared or coordinated state.
+
+### Angular Material and SCSS/BEM
+
+Angular Material is used for common UI components. SCSS (Sassy CSS) and BEM (Block Element Modifier) are used for project-specific component styling where appropriate.
+
+The project does not use Tailwind CSS in the initial frontend stack.
