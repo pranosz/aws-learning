@@ -12,13 +12,19 @@
 * [x] Add initial database data through a migration
 * [x] Verify API reads data from PostgreSQL
 * [x] Create Angular frontend
-* [ ] Connect Angular with backend
-* [ ] Implement basic CRUD (Create, Read, Update, Delete)
-* [ ] Add meaningful automated tests
+* [x] Connect Angular with backend
+* [x] Implement text search
+* [x] Implement distance range filtering
+* [x] Implement server-side pagination
+* [x] Implement server-side sorting
+* [x] Add loading and error states
+* [ ] Review and expand automated tests
+
+Basic CRUD is intentionally not part of the current learning scope. The application is currently read-oriented because the main objective is AWS, networking, infrastructure and CI/CD.
 
 ### Frontend baseline
 
-The Angular frontend has been created as part of Phase 1. The current baseline is:
+The frontend baseline is complete for the current learning goal:
 
 * Angular 22.2.0
 * Angular Material 22.2.0
@@ -27,20 +33,20 @@ The Angular frontend has been created as part of Phase 1. The current baseline i
 * standalone Angular components
 * strict TypeScript configuration
 * Vitest for unit tests
-* SSR (Server-Side Rendering) and SSG (Static Site Generation) disabled for the initial application
 * feature-based code organization following the current Angular Style Guide
+* server-side pagination and sorting handled by the backend
 
-The next frontend work is to connect the Angular application to the existing Spring Boot API.
+Further frontend features are intentionally postponed.
 
-## Phase 2 — Architecture fundamentals
+## Phase 2 — Architecture and networking fundamentals
 
 * [ ] HTTP (Hypertext Transfer Protocol)
 * [ ] HTTPS (Hypertext Transfer Protocol Secure)
-* [ ] REST (Representational State Transfer)
 * [ ] DNS (Domain Name System)
 * [ ] IP (Internet Protocol)
 * [ ] TCP (Transmission Control Protocol)
 * [ ] ports
+* [ ] client/server communication
 * [ ] reverse proxy
 * [ ] load balancing
 * [ ] stateless applications
@@ -54,7 +60,9 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] containers
 * [ ] Dockerfile
 * [ ] container networking
+* [ ] environment variables
 * [ ] Docker Compose
+* [ ] reproducible local startup
 
 ## Phase 4 — AWS foundations
 
@@ -78,6 +86,7 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] infrastructure repository
 * [ ] infrastructure deployment
 * [ ] infrastructure changes through Git
+* [ ] environment separation
 
 ## Phase 6 — Backend on AWS
 
@@ -97,6 +106,8 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] Evaluate API Gateway + ALB
 * [ ] Select the appropriate architecture
 * [ ] Document the decision
+* [ ] private versus public resources
+* [ ] inbound and outbound traffic flows
 
 ## Phase 8 — Database on AWS
 
@@ -104,7 +115,7 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] PostgreSQL on RDS
 * [ ] private database
 * [ ] subnet groups
-* [ ] security
+* [ ] Security Groups
 * [ ] secrets
 * [ ] backups
 * [ ] recovery
@@ -115,6 +126,7 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] S3
 * [ ] CloudFront
 * [ ] Route 53
+* [ ] ACM (AWS Certificate Manager)
 * [ ] HTTPS
 * [ ] caching
 * [ ] deployment
@@ -129,6 +141,8 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] ECR push
 * [ ] ECS deployment
 * [ ] CD (Continuous Delivery / Continuous Deployment)
+* [ ] deployment environments
+* [ ] rollback strategy
 
 ## Phase 11 — Observability and production
 
@@ -139,6 +153,7 @@ The next frontend work is to connect the Angular application to the existing Spr
 * [ ] monitoring
 * [ ] error tracking
 * [ ] observability
+* [ ] cost monitoring
 
 ## Phase 12 — Advanced architecture
 
@@ -173,7 +188,7 @@ For Angular and Java code:
 
 The project is intentionally not developed using a "make it work at any cost" approach.
 
-The goal is to learn how real applications are designed and built in professional engineering environments.
+The goal is to learn how real applications are designed, deployed and operated in professional engineering environments.
 
 Therefore:
 
@@ -185,6 +200,7 @@ Therefore:
 * alternatives and trade-offs should be considered
 * maintainability and testability matter
 * enterprise complexity should not be introduced without a real reason
+* every infrastructure component should have a clear learning or engineering purpose
 
 ### Cost
 
@@ -195,4 +211,4 @@ For AWS and infrastructure:
 * understand the trade-offs
 * prefer the cheapest solution that still provides sound security and teaches the intended concept
 
-The architecture may therefore be more sophisticated than strictly necessary for the application itself, but every additional component should have a clear learning or engineering reason.
+The architecture may therefore be more sophisticated than strictly necessary for the application itself, but every additional component should have a clear reason.

@@ -4,21 +4,29 @@
 
 Trail Races — educational mountain running race platform.
 
-The project is being used as a practical learning environment for Java, Spring Boot, PostgreSQL, AWS, architecture, security, Docker and CI/CD.
+The project is being used as a practical learning environment for Java, Spring Boot, PostgreSQL, AWS, networking, infrastructure, security, Docker and CI/CD.
+
+The application itself is not the main learning goal. It provides a realistic system that can be containerized, deployed, secured, monitored and automated.
 
 ## Current Phase
 
-Phase 1 — Application foundations
+Phase 1 — Application foundations is complete for the current MVP.
 
-## Current Lesson
+The next phase is Docker and containerization, followed by AWS networking and infrastructure.
 
-Angular frontend foundations and integration with the existing Spring Boot REST API, following the current Angular Style Guide and the project's KISS/DRY principles.
+## Current Status
 
-The backend foundation is already implemented with Spring Boot, JPA, PostgreSQL and Flyway.
+The local application is working end-to-end:
 
-## Current Goal
+```text
+Angular
+   ↓
+Spring Boot REST API
+   ↓
+PostgreSQL
+```
 
-Build the frontend incrementally on top of the existing backend while understanding the architectural boundaries between the Angular application and the Spring Boot API. Use professional engineering and security practices rather than shortcuts whose only purpose is to make the application run.
+The frontend is sufficiently complete for the current learning goal. Further frontend features are intentionally postponed.
 
 ## Current Local Architecture
 
@@ -44,22 +52,6 @@ Flyway
 PostgreSQL schema
 ```
 
-## Backend Structure
-
-The current backend contains:
-
-```text
-com.trailraces
-├── TrailRacesApplication.java
-└── race
-    ├── Race.java
-    ├── RaceController.java
-    ├── RaceRepository.java
-    └── RaceService.java
-```
-
-The previous `InMemoryRaceRepository` has been removed after introducing PostgreSQL persistence.
-
 ## Backend
 
 * Java: 21.0.5 LTS
@@ -69,17 +61,21 @@ The previous `InMemoryRaceRepository` has been removed after introducing Postgre
 * Group: `com.trailraces`
 * Artifact: `trail-races`
 
-Current dependencies include:
+Current backend capabilities:
 
-* Spring Web MVC
-* Spring Data JPA
-* PostgreSQL JDBC driver
-* Spring Boot Flyway starter
-* Flyway PostgreSQL database support
+* `GET /api/races`
+* text search
+* distance range filtering
+* pagination
+* sorting
+
+Pagination and sorting are implemented using Spring Data `Pageable`.
+
+The service layer combines optional search and distance specifications before passing the query and `Pageable` to the repository.
 
 ## Database
 
-PostgreSQL is now implemented locally.
+PostgreSQL is implemented locally.
 
 Current database:
 
@@ -105,18 +101,16 @@ The actual password is supplied through the `DB_PASSWORD` environment variable.
 
 ## Flyway
 
-Flyway is now used for database schema migrations.
+Flyway is used for database schema migrations.
 
-Current migrations:
+The repository currently documents the original migrations:
 
 ```text
 V1__create_races_table.sql
 V2__insert_initial_races.sql
 ```
 
-`V1` creates the `races` table.
-
-`V2` inserts three initial race records.
+The database also contains enough development data to exercise the implemented pagination.
 
 Flyway maintains:
 
@@ -124,26 +118,11 @@ Flyway maintains:
 flyway_schema_history
 ```
 
-The application startup log confirms that both migrations are validated and that the schema is up to date.
+Manual database changes are not used as a replacement for versioned migrations.
 
 ## Race Entity
 
-`Race` is now a JPA entity:
-
-```java
-@Entity
-@Table(name = "races")
-```
-
-The primary key uses generated identity values:
-
-```java
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
-```
-
-The entity has a no-argument constructor required by JPA/Hibernate and a parameterized constructor for normal application use.
+`Race` is a JPA entity mapped to the `races` table.
 
 Current fields:
 
@@ -170,63 +149,52 @@ Current Java types:
 
 ## Repository
 
-`RaceRepository` is now a Spring Data JPA repository:
+`RaceRepository` is a Spring Data JPA repository using:
 
 ```java
-public interface RaceRepository extends JpaRepository<Race, Long> {
-}
+JpaRepository<Race, Long>
+JpaSpecificationExecutor<Race>
 ```
 
-Spring Data provides the repository implementation automatically.
-
-The application no longer uses an in-memory repository.
+The repository supports standard persistence operations together with dynamic specifications used by search and distance filtering.
 
 ## Service
 
 `RaceService` is implemented and annotated with `@Service`.
 
-It receives `RaceRepository` through constructor injection and currently provides:
+It currently:
 
-```text
-getAllRaces()
-```
-
-which delegates to `raceRepository.findAll()`.
+* coordinates race retrieval
+* combines optional filtering criteria
+* passes `Pageable` to the repository
+* returns a paginated `Page<Race>`
 
 ## API
 
-The backend currently exposes:
+The backend exposes:
 
 ```http
 GET /api/races
 ```
 
-The endpoint now reads records from PostgreSQL and returns the race data as JSON.
+Supported query parameters:
 
-The endpoint has been manually verified locally after introducing JPA and Flyway.
+```text
+search
+distanceFrom
+distanceTo
+page
+size
+sort
+```
 
-## Initial Data
+Example:
 
-The current Flyway `V2` migration inserts three example races:
+```http
+GET /api/races?search=tatry&distanceFrom=20&distanceTo=80&page=0&size=10&sort=distance,desc
+```
 
-* Tatra Sky Marathon
-* Beskid Ultra Trail
-* Alpine Trail Run
-
-These are development/learning data, not production race data.
-
-## MVP API Requirements
-
-The MVP API should support:
-
-* list of races
-* one text search
-* distance range filtering
-* pagination
-
-### Search
-
-The `search` parameter searches only these String fields:
+Search is applied to:
 
 * `name`
 * `location`
@@ -234,64 +202,24 @@ The `search` parameter searches only these String fields:
 * `description`
 * `websiteUrl`
 
-It does not search:
+Distance filtering uses inclusive boundaries:
 
-* `distance`
-* `elevation`
-* `price`
-* `itra`
-* `date`
-
-### Distance filtering
-
-The API will use:
-
-* `distanceFrom`
-* `distanceTo`
-
-Example:
-
-```http
-GET /api/races?distanceFrom=20&distanceTo=50
+```text
+distance >= distanceFrom
+distance <= distanceTo
 ```
 
-### Combined example
+The backend validates:
 
-```http
-GET /api/races?search=tatry&distanceFrom=20&distanceTo=50&page=1&size=20
-```
+* `distanceFrom >= 0`
+* `distanceTo >= 0`
+* `distanceFrom <= distanceTo` when both values are provided
 
-### Pagination
-
-The planned response is:
-
-```json
-{
-  "content": [],
-  "page": 1,
-  "size": 20,
-  "totalElements": 47,
-  "totalPages": 3
-}
-```
-
-Pagination is not implemented yet.
-
-## Domain Decision
-
-One database record represents one race distance.
-
-If one event offers:
-
-* 25 km
-* 50 km
-* 100 km
-
-the current model treats these as three `Race` records.
+The API returns HTTP 400 for invalid search/filter input.
 
 ## Frontend
 
-The Angular frontend has now been created and runs locally at:
+The Angular frontend runs locally at:
 
 ```text
 http://localhost:4200/
@@ -302,36 +230,59 @@ Current frontend versions:
 * Angular: 22.2.0
 * Angular CLI: 22.2.0
 * Angular Material: 22.2.0
-* Angular CDK (Component Dev Kit): 22.2.0
+* Angular CDK (Component Development Kit): 22.2.0
 * Node.js: 22.22.3
 * npm: 10.9.8
 * TypeScript: 6.0.3
 * RxJS: 7.8.2
 * Vitest: 5.0.2
 
-Frontend configuration decisions:
+Frontend decisions:
 
 * standalone Angular components
 * strict TypeScript configuration
-* SCSS (Sassy Cascading Style Sheets)
-* BEM (Block Element Modifier) for component styling where appropriate
-* Angular Material for UI components
-* Vitest for unit tests
+* SCSS
+* BEM
+* Angular Material
+* Vitest
+* feature-based code organization
+* lazy-loaded `/races` route
 * SSR (Server-Side Rendering) and SSG (Static Site Generation) disabled for the initial application
-* Angular AI integration generated configuration for OpenAI Codex
+* Signal Store is not currently required
 
-The frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions. The planned structure is feature-based rather than organized into generic `components`, `services` or `directives` folders. Related component files and tests stay together.
+The current race list provides:
 
-The current feature structure is being prepared as:
+* search
+* distance filtering
+* server-side pagination
+* server-side sorting
+* loading state
+* error state
+* race cards
+
+The frontend uses Angular's development proxy so `/api/**` requests are forwarded to the local Spring Boot application.
+
+## Frontend Architecture
+
+Current feature structure:
 
 ```text
 src/app/
 ├── races/
-│   └── race-list/
-│       ├── race-list.ts
-│       ├── race-list.html
-│       ├── race-list.scss
-│       └── race-list.spec.ts
+│   ├── race.ts
+│   ├── race-page.ts
+│   ├── race-api.ts
+│   ├── race-search-criteria.ts
+│   ├── race-list/
+│   │   ├── race-list.ts
+│   │   ├── race-list.html
+│   │   ├── race-list.scss
+│   │   └── race-list.spec.ts
+│   └── race-card/
+│       ├── race-card.ts
+│       ├── race-card.html
+│       ├── race-card.scss
+│       └── race-card.spec.ts
 ├── app.ts
 ├── app.html
 ├── app.scss
@@ -340,34 +291,54 @@ src/app/
 └── app.spec.ts
 ```
 
-Signal Store is planned but has not been added yet. It will be introduced when a real application state-management requirement exists rather than being added in advance.
-
-The next frontend step is to connect the race list to the existing `GET /api/races` backend endpoint.
-
 ## AWS
 
 An AWS account exists.
 
-No AWS infrastructure has been created yet.
+No final production AWS architecture has been selected yet.
 
 Planned infrastructure includes:
 
-* AWS CDK
-* Docker
 * AWS networking
+* VPC
+* subnets
+* route tables
+* Internet Gateway
+* NAT
+* Security Groups
+* IAM
 * container deployment
 * managed PostgreSQL
 * frontend hosting
 * gateway/load balancing
 * CI/CD
+* monitoring
+
+AWS infrastructure will be introduced deliberately rather than created before the underlying concepts are understood.
 
 ## CI/CD
 
-CI/CD (Continuous Integration / Continuous Delivery) has not been implemented yet.
+CI/CD is not implemented yet.
 
 Planned technology:
 
 * GitHub Actions
+
+Planned high-level flow:
+
+```text
+Git push
+   ↓
+GitHub Actions
+   ↓
+build / validation / tests
+   ↓
+Docker image
+   ↓
+container registry
+   ↓
+AWS deployment
+```
 
 ## Security Status
 
@@ -379,76 +350,47 @@ Current security-related practice:
 * the password is not stored in `application.properties`
 * secrets should not be committed to Git
 * production secret management will be addressed before cloud deployment
-* network exposure and access permissions will be designed deliberately rather than opened for convenience
+* network exposure and access permissions will be designed deliberately
+* validation is applied at the API boundary
 
 ## Engineering Approach
 
 The project is intentionally **not developed using a "byleby coś odpalić" / "make it work at any cost" approach**.
 
-The target is to learn how a real engineering team would build the application:
+The target is to learn how a real engineering team would build and operate the application:
 
 * use good practices appropriate to the problem
 * keep the code simple, but not careless
 * introduce abstractions only when they solve a real problem
 * consider security from the beginning
 * avoid hardcoded secrets
-* understand trade-offs before selecting infrastructure or architectural components
+* understand infrastructure trade-offs
 * prefer maintainable and testable solutions
 * document important architectural decisions
 * keep AWS costs under control
 
-The fact that this is a learning project does not mean that security and engineering quality should be ignored.
+The learning project may use production-like patterns even when a simpler solution would be enough for the application itself, but every additional component must have a clear learning or engineering reason.
 
-## What I Understand
+## Testing
 
-* Spring Boot can expose REST endpoints.
-* `@RestController` is used for REST controllers.
-* `@GetMapping` maps a GET request to a controller method.
-* A Controller should focus on HTTP/API concerns.
-* A Service can coordinate application operations and business logic.
-* A Repository is responsible for persistence/data access.
-* Constructor injection can be used to provide dependencies.
-* Spring Data JPA can provide repository implementations automatically.
-* JPA entities map Java objects to database tables.
-* Hibernate is used by Spring Data JPA for ORM (Object-Relational Mapping).
-* JPA/Hibernate requires a no-argument constructor for the entity.
-* Flyway manages versioned database migrations.
-* PostgreSQL now stores the application data locally.
-* Database passwords should not be hardcoded in source configuration.
+The current frontend and backend have working test configurations.
 
-## What I Don't Understand Yet
+The user has intentionally postponed the broader test-quality pass until the application foundation is complete. Tests should be reviewed and expanded at the end of the current application-foundation stage rather than interrupting each infrastructure learning step.
 
-* How Spring Data derives or executes more complex repository queries.
-* How API filtering and pagination should be implemented efficiently with PostgreSQL.
-* How transactions should be used in the application.
-* How validation should be implemented at the API boundary.
-* How API errors should be represented consistently.
-* How indexes affect PostgreSQL query performance.
-* How the local architecture should evolve toward the AWS architecture.
-* How authentication and authorization should be introduced securely.
-* How secrets should be managed in AWS.
-* How network access should be restricted in AWS.
+## Current Next Step
 
-## Known Technical Follow-up
+The next implementation stage is:
 
-Spring Boot currently reports that `spring.jpa.open-in-view` is enabled by default.
+**Docker and containerization**
 
-This warning has not been addressed yet. It should be evaluated deliberately rather than changed simply to remove the warning.
+The immediate goal is to understand and implement:
 
-## Next Step
+* Docker image
+* Dockerfile
+* container
+* environment variables
+* container networking
+* Docker Compose
+* reproducible local startup
 
-Continue Phase 1 by connecting the Angular frontend to the existing backend API. The next functional flow is:
-
-```text
-Angular RaceList
-      ↓
-HTTP (Hypertext Transfer Protocol) request
-      ↓
-GET /api/races
-      ↓
-Spring Boot
-      ↓
-PostgreSQL
-```
-
-The frontend should first consume the existing API before adding further state-management or architectural abstractions. After the basic integration works, the existing backend search, distance filtering and pagination capabilities will be connected to the frontend.
+After Docker, continue with AWS networking and infrastructure.

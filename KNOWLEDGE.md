@@ -2,24 +2,9 @@
 
 ## Spring Boot REST API
 
-Spring Boot can expose HTTP (Hypertext Transfer Protocol) endpoints using controller classes.
+Spring Boot exposes HTTP (Hypertext Transfer Protocol) endpoints using controller classes.
 
 A class annotated with `@RestController` can handle HTTP requests.
-
-Example:
-
-```java
-@RestController
-public class RaceController {
-
-    @GetMapping("/api/races")
-    public List<Race> getRaces() {
-        ...
-    }
-}
-```
-
-`@GetMapping` maps an HTTP GET request to a Java method.
 
 The current application exposes:
 
@@ -29,7 +14,7 @@ GET /api/races
 
 ## Controller → Service → Repository
 
-The backend now uses the following layered structure:
+The backend uses:
 
 ```text
 Controller
@@ -51,7 +36,7 @@ Typical responsibilities:
 
 * receive HTTP requests
 * read request parameters
-* validate API input
+* trigger validation
 * call the Service
 * return the HTTP response
 
@@ -61,94 +46,159 @@ The Controller should not contain the main business logic or database access.
 
 Responsible for application/business logic.
 
-Current responsibility:
+Current responsibilities:
 
-* coordinate retrieving races
-* call the Repository
-
-Future responsibilities may include:
-
-* applying business rules
-* combining filtering criteria
-* coordinating multiple repositories or services
+* coordinate race retrieval
+* combine optional search and distance filters
+* pass pagination and sorting information to the Repository
 
 ### Repository
 
 Responsible for data access.
 
-The current repository is a Spring Data JPA repository:
+The current repository uses:
 
 ```java
-public interface RaceRepository extends JpaRepository<Race, Long> {
-}
+JpaRepository<Race, Long>
+JpaSpecificationExecutor<Race>
 ```
 
 Spring Data creates the implementation automatically.
 
-Typical repository responsibilities include:
+## Spring Data JPA Specifications
 
-* retrieve data
-* save data
-* update data
-* delete data
-* communicate with the persistence layer
+Optional search criteria can be combined dynamically using JPA Specifications.
 
-The Service should not need to know the details of how data is stored.
+The current application builds a specification from:
 
-## Why use layers?
+* text search
+* minimum distance
+* maximum distance
 
-Without layers, a Controller can gradually become responsible for everything:
+The resulting specification is passed together with `Pageable` to the repository.
 
-```text
-Controller
-├── HTTP handling
-├── business logic
-├── database queries
-├── validation
-└── data transformation
-```
-
-This becomes difficult to understand, test and maintain.
-
-With layers:
+Conceptually:
 
 ```text
-Controller
+search
    ↓
-Service
+RaceSpecifications.search()
+
+distanceFrom
    ↓
-Repository
-```
+RaceSpecifications.distanceFrom()
 
-each component has a clearer responsibility.
+distanceTo
+   ↓
+RaceSpecifications.distanceTo()
 
-The goal is not to create layers simply because they are a common pattern. The goal is to separate responsibilities where the separation provides a real benefit.
-
-## Spring Data JPA
-
-Spring Data JPA provides repository abstractions for JPA-based persistence.
-
-In this project:
-
-```text
+all applicable specifications
+   ↓
+AND
+   ↓
 RaceRepository
-      ↓
-JpaRepository<Race, Long>
-      ↓
-Spring Data JPA
-      ↓
-Hibernate
-      ↓
-PostgreSQL
 ```
 
-Because `RaceRepository` extends `JpaRepository`, standard operations such as `findAll()`, `findById()`, `save()` and `deleteById()` are available without implementing them manually.
+This avoids creating a separate repository method for every possible combination of optional filters.
 
-This keeps the current repository simple and avoids unnecessary boilerplate.
+## Pagination
+
+Spring Data `Pageable` is used for pagination.
+
+Example request:
+
+```http
+GET /api/races?page=0&size=10
+```
+
+The repository returns a `Page<Race>`.
+
+The page contains:
+
+* current content
+* page number
+* page size
+* total element count
+* total page count
+
+The frontend uses this metadata to drive Angular Material's paginator.
+
+Pagination is performed by the backend/database rather than by downloading the complete dataset into the browser.
+
+## Sorting
+
+Spring Data `Pageable` also handles sorting.
+
+Example:
+
+```http
+GET /api/races?page=0&size=10&sort=distance,desc
+```
+
+The backend passes the `Pageable` to the repository.
+
+Conceptually:
+
+```text
+sort=distance,desc
+        ↓
+Spring Data Pageable
+        ↓
+Repository
+        ↓
+SQL ORDER BY distance DESC
+```
+
+The frontend exposes a controlled set of supported sort fields:
+
+* `name`
+* `date`
+* `distance`
+* `price`
+
+and directions:
+
+* `asc`
+* `desc`
+
+The frontend validates the sort value before sending it to the backend.
+
+## Validation
+
+The API validates the race search criteria.
+
+Current rules include:
+
+```text
+distanceFrom >= 0
+distanceTo >= 0
+distanceFrom <= distanceTo
+```
+
+Invalid input results in HTTP 400 (Bad Request).
+
+Class-level validation is used for the relationship between `distanceFrom` and `distanceTo`.
+
+## API Errors
+
+The backend uses a global REST exception handler for validation errors.
+
+The current response shape is:
+
+```json
+{
+  "status": 400,
+  "message": "..."
+}
+```
+
+This provides a simple and consistent response for the current MVP.
+
+The error contract can be revisited when the API becomes more complex.
 
 ## JPA Entity
 
-`Race` is now a JPA entity:
+`Race` is a JPA entity:
 
 ```java
 @Entity
@@ -164,24 +214,13 @@ The primary key is generated by the database:
 private Long id;
 ```
 
-### No-argument constructor
+A JPA entity needs an accessible no-argument constructor so that Hibernate can instantiate it when reading rows from the database.
 
-A JPA entity needs an accessible no-argument constructor so that Hibernate can instantiate the entity when reading rows from the database.
-
-The current `Race` class therefore has:
-
-```java
-public Race() {
-}
-```
-
-It also has a parameterized constructor for normal application use.
-
-The two constructors are not duplicate methods. They are overloaded constructors with different parameter lists.
+The current `Race` class therefore has a no-argument constructor and a parameterized constructor for normal application use.
 
 ## PostgreSQL
 
-PostgreSQL is now used as the local persistence database.
+PostgreSQL is used as the local persistence database.
 
 Current database:
 
@@ -189,7 +228,7 @@ Current database:
 trail_races
 ```
 
-The application connects to PostgreSQL through the JDBC URL:
+The application connects through:
 
 ```text
 jdbc:postgresql://localhost:5432/trail_races
@@ -199,46 +238,21 @@ The database contains the `races` table and Flyway's `flyway_schema_history` tab
 
 ## Flyway
 
-Flyway is used to manage database schema changes through versioned migrations.
+Flyway manages database schema changes through versioned migrations.
 
-Current migrations:
-
-```text
-V1__create_races_table.sql
-V2__insert_initial_races.sql
-```
-
-### V1
-
-Creates the `races` table and defines its columns, primary key and constraints.
-
-### V2
-
-Inserts initial development data into the `races` table.
-
-### Migration history
-
-Flyway maintains:
+Flyway records applied migrations in:
 
 ```text
 flyway_schema_history
 ```
 
-This table records which migrations have been applied.
+The project uses migrations instead of manual schema changes.
 
-The application startup currently validates both migrations and reports that the schema is up to date.
-
-### Why use migrations?
-
-Database changes should be reproducible and versioned together with the application.
-
-Manual changes made only through a local database administration tool are difficult to reproduce in another environment.
-
-Flyway provides a controlled path from local development toward automated deployment environments.
+The migration history is part of the deployable application state and can later be applied in a cloud environment.
 
 ## Database configuration and secrets
 
-The database connection is configured in `application.properties`, but the password is not stored there.
+The database password is not stored in source code.
 
 Current configuration pattern:
 
@@ -252,54 +266,36 @@ spring.datasource.password=${DB_PASSWORD}
 
 Secrets should not be hardcoded in source code or committed to Git.
 
-This is intentionally being applied already in local development rather than postponed until AWS deployment.
-
-When the application moves to AWS, a proper managed secret solution will be selected and documented.
+This principle is applied already in local development and will later be replaced or extended with AWS-managed secret storage.
 
 ## Trail Races API
 
 The application is a REST (Representational State Transfer) API for mountain running races.
 
-The current endpoint is:
+Current endpoint:
 
 ```http
 GET /api/races
 ```
 
-It now retrieves race records from PostgreSQL through the Service and Repository layers.
+Supported parameters:
 
-The planned MVP (Minimum Viable Product) functionality is:
-
-* list races
-* text search
-* distance range filtering
-* pagination
-
-## Race data
-
-A `Race` currently contains:
-
-* `id`
-* `name`
-* `distance`
-* `elevation`
-* `location`
-* `date`
-* `price`
-* `currency`
-* `itra`
-* `description`
-* `websiteUrl`
-
-## Search
-
-The API will support a single `search` parameter.
+```text
+search
+distanceFrom
+distanceTo
+page
+size
+sort
+```
 
 Example:
 
 ```http
-GET /api/races?search=tatry
+GET /api/races?search=tatry&distanceFrom=20&distanceTo=80&page=0&size=10&sort=distance,desc
 ```
+
+## Search
 
 The `search` parameter searches only String fields:
 
@@ -336,21 +332,13 @@ The API uses:
 * `distanceFrom`
 * `distanceTo`
 
-Example:
-
-```http
-GET /api/races?distanceFrom=20&distanceTo=50
-```
-
-The intended logic is:
+The logic is:
 
 ```text
 distance >= distanceFrom
 AND
 distance <= distanceTo
 ```
-
-The frontend may later display this as a slider, but the API remains based on numerical range parameters.
 
 ## Combining search and filtering
 
@@ -378,97 +366,82 @@ AND
 distance <= distanceTo
 ```
 
-## Pagination
+## Angular frontend
 
-The API will support pagination.
+The frontend is built with Angular 22.2.0 and Angular Material 22.2.0.
 
-Planned parameters:
+Current supporting versions:
 
-* `page`
-* `size`
+* TypeScript 6.0.3
+* RxJS 7.8.2
+* Vitest 5.0.2
+* Node.js 22.22.3
 
-Example:
+The frontend uses:
+
+* standalone components
+* strict TypeScript configuration
+* Angular Material
+* SCSS
+* BEM
+* Reactive Forms
+* Angular signals
+* feature-based organization
+
+The `/races` route is lazy-loaded.
+
+## Frontend API communication
+
+The frontend has a dedicated `RaceApi` class for communication with the backend.
+
+The frontend sends requests such as:
 
 ```http
-GET /api/races?search=tatry&distanceFrom=20&distanceTo=50&page=1&size=20
+GET /api/races?page=0&size=10&sort=date,asc
 ```
 
-The planned response structure is:
+The Angular development proxy forwards `/api/**` to the local Spring Boot server.
 
-```json
-{
-  "content": [],
-  "page": 1,
-  "size": 20,
-  "totalElements": 47,
-  "totalPages": 3
-}
-```
+The frontend does not communicate directly with PostgreSQL.
 
-The exact implementation has not been introduced yet.
+## URL as search state
 
-## Domain Model
+The race list keeps search, filter, pagination and sort state in URL query parameters.
 
-One database record represents one race distance.
-
-If one event offers:
-
-* 25 km
-* 50 km
-* 100 km
-
-the current model treats these as three `Race` records.
-
-This keeps the initial domain model simple and makes distance filtering straightforward.
-
-This decision can be revisited later if the domain needs a separate concept of an event containing multiple race distances.
-
-## Java Data Types
-
-Current decisions:
-
-* `Long` for `id`
-* `Double` for distance
-* `Integer` for elevation
-* `LocalDate` for race date
-* `BigDecimal` for price
-* `String` for text fields
-
-### BigDecimal and money
-
-`BigDecimal` is used for monetary values because floating-point types can introduce precision problems in calculations involving decimal values.
-
-### Double and distance
-
-`Double` is currently used for distance because distance is a measured numerical value and does not have the same precision requirements as monetary values.
-
-This decision can be revisited if the domain later requires stricter precision.
-
-## Search implementation
-
-The initial implementation can use a straightforward SQL (Structured Query Language) query containing OR conditions across the searchable String fields.
-
-For example, conceptually:
+Examples:
 
 ```text
-name LIKE ...
-OR location LIKE ...
-OR currency LIKE ...
-OR description LIKE ...
-OR websiteUrl LIKE ...
+/races?search=tatry
 ```
 
-For a small MVP database, this simple approach is sufficient.
+```text
+/races?distanceFrom=20&distanceTo=80
+```
 
-As the database grows, search performance can become a problem.
+```text
+/races?page=1&size=20&sort=distance,desc
+```
 
-Possible future solutions include:
+This means that refreshing or sharing the URL preserves the current list state.
 
-* database indexes
-* PostgreSQL full-text search
-* a dedicated search engine such as OpenSearch
+When a new search or sort is applied, the page index is reset to the first page.
 
-The project should not introduce a dedicated search engine before there is a real reason to do so.
+## Frontend component boundaries
+
+The race list and race card are separate components.
+
+The `RaceList` component is responsible for:
+
+* search/filter form
+* URL state
+* loading/error state
+* calling `RaceApi`
+* pagination
+* sorting
+
+The `RaceCard` component is responsible for presenting one race.
+
+This keeps the list orchestration separate from the visual representation of an individual race.
 
 ## Engineering and security principle
 
@@ -483,13 +456,10 @@ This means:
 * consider security from the beginning
 * never hardcode secrets
 * prefer least privilege where applicable
-* consider input validation and safe handling of external data
-* evaluate authentication and authorization before exposing protected functionality
+* validate external input
 * document important architectural and security decisions
 * consider maintainability, testability and operational complexity
 * consider cost when selecting AWS services
-
-The project is a learning environment, but the implementation should resemble the way a real engineering team would build the application whenever that can be achieved without unnecessary complexity.
 
 ## Architecture principle
 
@@ -506,59 +476,26 @@ Architecture should explicitly consider:
 * operational complexity
 * alternatives and trade-offs
 
-The cheapest solution is not automatically the correct solution if it introduces poor security or prevents learning the target concept. Likewise, an expensive or complex service should not be introduced only because it is common in large organizations.
+The project should not introduce a service, framework or AWS component merely because it is common in large organizations.
 
+## Next learning stage
 
-## Angular frontend foundations
+The application layer is now sufficiently complete for the current learning goal.
 
-The frontend is built with Angular 22.2.0 and Angular Material 22.2.0. The current supporting versions are TypeScript 6.0.3, RxJS 7.8.2 and Vitest 5.0.2.
+The next stage is Docker and containerization.
 
-The project uses standalone Angular components and strict TypeScript configuration. Server-Side Rendering (SSR) and Static Site Generation (SSG) are disabled for the initial application.
-
-### Angular Style Guide
-
-The current Angular Style Guide is used as the baseline for frontend structure and implementation. The main principles adopted by this project are:
-
-* organize code by feature areas
-* keep related files together
-* use the current Angular file naming convention
-* keep one concept per file
-* prefer `inject()` for dependency injection
-* lazy-load route components where appropriate
-* avoid abstractions that do not solve a real problem
-
-For the current `races` feature this means related component files and the test are kept together:
+The key concepts to learn next are:
 
 ```text
-races/
-└── race-list/
-    ├── race-list.ts
-    ├── race-list.html
-    ├── race-list.scss
-    └── race-list.spec.ts
+Docker image
+      ↓
+Container
+      ↓
+Container networking
+      ↓
+Environment configuration
+      ↓
+Docker Compose
 ```
 
-### Why feature-based organization?
-
-A generic structure such as:
-
-```text
-components/
-services/
-models/
-directives/
-```
-
-can separate code that belongs to the same feature. Feature-based organization keeps related functionality together and makes the feature easier to find and evolve.
-
-The project therefore does not create generic technical folders simply because they are common in older Angular applications.
-
-### State management
-
-Signal Store is planned for the project, but it is not added during initial setup. State management should be introduced when the application has a concrete requirement for shared or coordinated state.
-
-### Angular Material and SCSS/BEM
-
-Angular Material is used for common UI components. SCSS (Sassy CSS) and BEM (Block Element Modifier) are used for project-specific component styling where appropriate.
-
-The project does not use Tailwind CSS in the initial frontend stack.
+After that, the project will move into AWS networking and Infrastructure as Code.

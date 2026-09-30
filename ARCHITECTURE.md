@@ -2,29 +2,33 @@
 
 ## Current Local Architecture
 
-The backend now uses a layered Spring Boot architecture with PostgreSQL persistence:
+The application currently works locally as:
 
 ```text
-Client
-   ↓
-RaceController
-   ↓
-RaceService
-   ↓
-RaceRepository
-   ↓
-Spring Data JPA / Hibernate
-   ↓
+Angular
+   │
+   │ HTTP
+   ▼
+Spring Boot
+   │
+   │ Spring Data JPA / Hibernate
+   ▼
 PostgreSQL
 ```
 
-Database schema changes are managed by Flyway:
+The backend uses a layered architecture:
 
 ```text
-Flyway
-   ↓
-PostgreSQL schema
+RaceController
+      ↓
+RaceService
+      ↓
+RaceRepository
+      ↓
+PostgreSQL
 ```
+
+Database schema changes are managed by Flyway.
 
 The current API endpoint is:
 
@@ -32,20 +36,31 @@ The current API endpoint is:
 GET /api/races
 ```
 
-It currently reads race records from the `races` table in PostgreSQL.
+The endpoint supports text search, distance filtering, pagination and sorting.
 
 ## Current Frontend Architecture
 
-The Angular frontend is being organized by feature area rather than by generic technical folders. The current target structure is:
+The Angular frontend is organized by feature area rather than by generic technical folders.
+
+Current structure:
 
 ```text
 src/app/
 ├── races/
-│   └── race-list/
-│       ├── race-list.ts
-│       ├── race-list.html
-│       ├── race-list.scss
-│       └── race-list.spec.ts
+│   ├── race.ts
+│   ├── race-page.ts
+│   ├── race-api.ts
+│   ├── race-search-criteria.ts
+│   ├── race-list/
+│   │   ├── race-list.ts
+│   │   ├── race-list.html
+│   │   ├── race-list.scss
+│   │   └── race-list.spec.ts
+│   └── race-card/
+│       ├── race-card.ts
+│       ├── race-card.html
+│       ├── race-card.scss
+│       └── race-card.spec.ts
 ├── app.ts
 ├── app.html
 ├── app.scss
@@ -54,47 +69,57 @@ src/app/
 └── app.spec.ts
 ```
 
-The application shell owns global navigation and the router outlet. The `races` feature owns race-related UI and, as the feature grows, its related API and state code.
+The `/races` route is lazy-loaded.
 
-Route components should be lazy-loaded where appropriate. The initial `/races` route is intended to load the race-list component lazily.
+The frontend uses:
 
-The frontend uses Angular Material for UI components and SCSS with BEM (Block Element Modifier) naming for project-specific styling.
+* standalone Angular components
+* Angular Material
+* SCSS with BEM
+* Angular signals for local component state
+* Reactive Forms for search/filter input
 
-The current Angular Style Guide is the baseline for frontend organization and implementation decisions. The project avoids adding generic `components`, `services` or `directives` folders solely for categorization. It also avoids adding state-management or other abstractions before a real requirement exists.
+Signal Store is not currently required because the existing feature does not have a demonstrated need for centralized application state.
 
-### Frontend → Backend boundary
+## Frontend → Backend Boundary
 
-The intended application flow is:
+The application flow is:
 
 ```text
-Angular feature
+Angular RaceList
       ↓
-Frontend API layer
+RaceApi
       ↓
 HTTP request
       ↓
-Spring Boot Controller
+Spring Boot RaceController
       ↓
-Service
+RaceService
       ↓
-Repository
+RaceRepository
       ↓
 PostgreSQL
 ```
 
-The frontend should not contain backend persistence concerns. The HTTP/API boundary should remain explicit so that the frontend and backend can evolve independently.
+The frontend communicates with the backend through HTTP and does not contain persistence concerns.
 
-## Current Backend Responsibilities
+The development frontend uses a proxy so that `/api/**` requests are forwarded to the local Spring Boot server.
+
+The backend remains independent of the Angular implementation.
+
+## Backend Responsibilities
 
 ### Controller
 
-`RaceController` is responsible for the HTTP/API boundary.
+`RaceController` owns the HTTP/API boundary.
 
-Current responsibility:
+Current responsibilities:
 
 * expose `GET /api/races`
-* delegate the operation to `RaceService`
-* return the result as an HTTP response
+* receive search/filter/pagination/sort parameters
+* trigger validation
+* call `RaceService`
+* return the HTTP response
 
 The Controller should not contain database access or the main business logic.
 
@@ -102,147 +127,179 @@ The Controller should not contain database access or the main business logic.
 
 `RaceService` represents the application/service layer.
 
-Current responsibility:
+Current responsibilities:
 
-* coordinate retrieval of races
-* call `RaceRepository`
+* coordinate race retrieval
+* combine optional filtering criteria
+* pass `Pageable` to the Repository
 
-As business rules are introduced, they should be placed here when they belong to the application/service layer rather than the HTTP or persistence layers.
+Business rules that belong to the application/service layer should be added here when they appear.
 
 ### Repository
 
-`RaceRepository` extends Spring Data JPA's `JpaRepository<Race, Long>`.
+`RaceRepository` uses Spring Data JPA:
 
-Current responsibility:
+```java
+JpaRepository<Race, Long>
+JpaSpecificationExecutor<Race>
+```
 
-* provide persistence operations for `Race`
-* delegate database access to Spring Data JPA/Hibernate
+Current responsibilities:
 
-The previous `InMemoryRaceRepository` implementation has been removed because PostgreSQL is now the persistence mechanism.
+* provide persistence operations
+* execute dynamic specifications
+* apply pagination and sorting through `Pageable`
 
 ## Database Architecture
 
 The application uses PostgreSQL locally.
 
-The database schema is managed by Flyway rather than being created manually or relying on Hibernate to change the schema automatically.
+The schema is managed by Flyway rather than being created manually or relying on Hibernate to change the schema automatically.
 
-Current migrations:
-
-```text
-V1__create_races_table.sql
-    ↓
-creates races table
-
-V2__insert_initial_races.sql
-    ↓
-inserts initial race data
-```
-
-Flyway also maintains:
+Flyway maintains:
 
 ```text
 flyway_schema_history
 ```
 
-which records applied migrations.
+The application uses PostgreSQL through Spring Data JPA and Hibernate.
 
-## Entity Mapping
+## API Query Flow
 
-`Race` is a JPA entity mapped to the PostgreSQL `races` table.
+A request such as:
 
-```text
-Race Java entity
-      ↕
-Hibernate / JPA
-      ↕
-races PostgreSQL table
+```http
+GET /api/races?search=tatry&distanceFrom=20&distanceTo=80&page=0&size=10&sort=distance,desc
 ```
 
-The entity contains a no-argument constructor required by JPA/Hibernate and a parameterized constructor for normal application use.
-
-## API Flow
-
-For the current request:
+flows through:
 
 ```text
-HTTP GET /api/races
-        ↓
+HTTP request
+      ↓
 RaceController
-        ↓
+      ↓
+RaceSearchCriteria validation
+      ↓
 RaceService
-        ↓
+      ↓
+RaceSpecifications
+      ↓
+Pageable
+      ↓
 RaceRepository
-        ↓
-Spring Data JPA
-        ↓
-Hibernate
-        ↓
+      ↓
+Spring Data JPA / Hibernate
+      ↓
 PostgreSQL
-        ↓
-Race objects
-        ↓
-HTTP response
 ```
+
+Search and distance filtering are performed by the backend.
+
+Pagination and sorting are also performed by the backend/database rather than by Angular.
 
 ## Security Principles
 
-Security is a project requirement from the beginning, not a later add-on.
+Security is a project requirement from the beginning.
 
 In particular:
 
 * secrets must not be hardcoded in source code
 * database passwords are supplied through environment variables
 * sensitive configuration should be separated from application source code
-* database access should use the minimum required permissions when the deployment architecture is introduced
+* database access should use minimum required permissions
 * network access should be restricted rather than exposed unnecessarily
-* authentication and authorization will be introduced deliberately when the application requires them
+* authentication and authorization will be introduced deliberately when required
 * production infrastructure should use managed secret storage where appropriate
 * security decisions should be documented together with architectural trade-offs
 
-The local configuration currently uses:
+The local configuration uses:
 
 ```properties
 spring.datasource.password=${DB_PASSWORD}
 ```
 
-The actual database password is therefore not stored in `application.properties`.
+The actual database password is not stored in `application.properties`.
 
 ## Target Cloud Architecture
 
-The final architecture is expected to evolve toward a professional AWS architecture.
+The final AWS architecture has not yet been selected.
 
-The exact architecture has not yet been selected.
-
-Expected major components include:
+The project is expected to evolve toward something conceptually similar to:
 
 ```text
-User
-  ↓
-CloudFront / frontend hosting
-  ↓
-Gateway / Load Balancer
-  ↓
-Backend containers
-  ↓
-PostgreSQL
+                         Internet
+                            │
+                            ▼
+                    DNS / HTTPS
+                            │
+                            ▼
+                    Frontend delivery
+                    S3 / CloudFront
+                            │
+                            │ API requests
+                            ▼
+                  Gateway / Load Balancer
+                            │
+                            ▼
+                    Backend containers
+                            │
+                      private network
+                            │
+                            ▼
+                     PostgreSQL
+                        RDS
 ```
 
-The gateway architecture will be evaluated later.
+This diagram is conceptual, not the final infrastructure design.
 
-Possible approaches include:
+The exact architecture will be selected after learning and evaluating:
 
+* VPC
+* public and private subnets
+* route tables
+* Internet Gateway
+* NAT
+* Security Groups
+* IAM
+* ALB (Application Load Balancer)
 * API Gateway
-* Application Load Balancer
-* API Gateway + Application Load Balancer
+* ECS / Fargate
+* ECR
+* RDS
+* S3
+* CloudFront
+* Route 53
+* ACM
+* CloudWatch
+* secrets management
 
-The final choice will be based on:
+The final design must balance:
 
-* architectural requirements
 * security
+* availability
 * scalability
-* operational complexity
 * cost
-* what concept the architecture is intended to teach
+* operational complexity
+* learning value
+
+## Development Direction
+
+The application layer is now sufficiently complete for the current learning goal.
+
+The next architecture step is to containerize the local application:
+
+```text
+Angular
+   ↓
+Spring Boot container
+   ↓
+PostgreSQL container
+```
+
+This will provide the bridge from application development to infrastructure and AWS.
+
+After Docker, the project will move to AWS networking and Infrastructure as Code.
 
 ## Architectural Principles
 

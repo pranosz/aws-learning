@@ -1,27 +1,14 @@
 # Trail Races — Learning Project
 
-Educational project for learning software architecture, Java, Spring Boot, Angular, AWS, infrastructure, security and CI/CD.
+Educational project for learning software architecture, Java, Spring Boot, Angular, AWS, infrastructure, networking, security and CI/CD.
 
 ## Project
 
 Trail Races is a web application for discovering and browsing mountain running races.
 
-The application will provide information about races, including:
+The application is developed incrementally, starting from a simple local application and evolving toward a professional cloud architecture.
 
-* race name
-* date
-* location
-* organizer
-* available distances
-* elevation gain
-* race type
-* price
-* currency
-* ITRA (International Trail Running Association) points
-* description
-* website
-
-The application is being developed incrementally, starting from a simple local application and evolving toward a professional cloud architecture.
+The application is primarily a **learning vehicle for AWS, networking, infrastructure, Docker and CI/CD**. The frontend and backend provide a realistic application to deploy, secure, monitor and automate.
 
 ## Technology
 
@@ -31,7 +18,7 @@ The application is being developed incrementally, starting from a simple local a
 * Angular Material
 * SCSS (Sassy Cascading Style Sheets)
 * BEM (Block Element Modifier)
-* Signal Store
+* Signal Store — planned, not currently required
 
 Current frontend baseline:
 
@@ -42,17 +29,18 @@ Current frontend baseline:
 * Vitest 5.0.2
 * Node.js 22.22.3
 
-The frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions. In particular:
+The frontend follows the current Angular Style Guide as the baseline for code organization and implementation decisions.
 
-* organize code by feature areas rather than generic type-based folders
-* keep related component files together
-* use the current Angular file naming convention
-* keep one concept per file
-* prefer `inject()` for dependency injection
-* use lazy-loaded route components where appropriate
-* avoid adding abstractions, state management or architectural layers before they solve a real problem
+The frontend currently provides:
 
-Signal Store is planned, but it will be introduced only when the application has a real state-management requirement.
+* race list
+* text search
+* distance range filtering
+* server-side pagination
+* server-side sorting
+* loading and error states
+
+The frontend work is considered sufficient for the current learning goal. Further UI features are not a priority unless they become useful for infrastructure or deployment work.
 
 ### Backend
 
@@ -79,25 +67,45 @@ Signal Store is planned, but it will be introduced only when the application has
 * CI (Continuous Integration)
 * CD (Continuous Delivery / Continuous Deployment)
 
-## Learning Goals
+## Main Learning Goals
 
-The main goal is not only to build the application, but to understand:
+The main goal is to understand how a real application is built, deployed and operated, with particular emphasis on:
 
-* application architecture
-* backend and frontend communication
+* AWS
 * networking
-* cloud infrastructure
-* AWS services
+* infrastructure
 * Infrastructure as Code
-* containerization
+* Docker and containerization
 * CI/CD
 * security
+* deployment
 * scalability
+* availability
 * observability
 * architectural decision-making
 * database persistence and migrations
 
-The architecture should reflect professional patterns used in larger organizations where appropriate, while keeping infrastructure costs as low as reasonably possible for a learning project.
+The application itself is not the end goal. It is the practical environment in which these concepts are learned.
+
+The target progression is:
+
+```text
+Working local application
+        ↓
+Docker
+        ↓
+Networking fundamentals
+        ↓
+AWS infrastructure
+        ↓
+Infrastructure as Code
+        ↓
+Cloud deployment
+        ↓
+CI/CD
+        ↓
+Security and observability
+```
 
 ## Engineering and Security Principles
 
@@ -119,28 +127,30 @@ The implementation should therefore:
 * avoid unnecessary enterprise complexity
 * keep AWS costs under control
 
-Security is not something that will be added only at the end of the course. Security considerations should influence decisions throughout the project, especially when introducing databases, networking, authentication, secrets and AWS infrastructure.
+Security is not something that will be added only at the end of the course. Security considerations should influence decisions throughout the project.
+
+The project should also avoid introducing an expensive or complex AWS service merely because it is common in large organizations. Each component should have a clear engineering or learning reason.
 
 ## Learning Approach
 
 The project is the practical learning environment.
 
-The application will be developed incrementally and each implementation step should be used to understand the architectural concepts behind it.
+Development should proceed in logical, testable steps rather than as isolated theoretical exercises.
 
 A typical learning cycle is:
 
 ```text
 Understand the reason
         ↓
-Make one small change
+Make one logical change
         ↓
-Run tests / application
+Run the application
         ↓
 Verify the result
         ↓
 Understand what happened
         ↓
-Document the durable knowledge
+Document durable knowledge
         ↓
 Continue
 ```
@@ -152,13 +162,80 @@ Programming should follow:
 * avoid unnecessary abstractions
 * introduce design patterns only when they solve a real problem
 
-Architecture should focus on professional patterns, trade-offs and the reasons behind architectural decisions.
+For infrastructure, the same principle applies: understand why a component exists before introducing it.
 
-For AWS and infrastructure, cost should always be considered. When a solution introduces cost, cheaper alternatives and their trade-offs should be discussed.
+## Current Local Architecture
+
+The current application works locally as:
+
+```text
+Angular
+   │
+   │ HTTP
+   ▼
+Spring Boot
+   │
+   │ Spring Data JPA / Hibernate
+   ▼
+PostgreSQL
+```
+
+The backend follows:
+
+```text
+RaceController
+      ↓
+RaceService
+      ↓
+RaceRepository
+      ↓
+PostgreSQL
+```
+
+Database schema is managed by Flyway.
+
+The main API endpoint is:
+
+```http
+GET /api/races
+```
+
+The API currently supports:
+
+* text search
+* distance range filtering
+* pagination
+* sorting
+
+Pagination and sorting are performed on the backend using Spring Data `Pageable`, so the database performs the ordering and pagination rather than the Angular application.
+
+## Current Frontend State
+
+The Angular frontend runs locally at:
+
+```text
+http://localhost:4200
+```
+
+The backend runs locally at:
+
+```text
+http://localhost:8080
+```
+
+Angular uses a development proxy so that frontend requests to:
+
+```text
+/api/races
+```
+
+are forwarded to the Spring Boot backend.
+
+The current frontend feature is intentionally kept simple. It is sufficient to act as a realistic client for the backend while the project moves toward AWS and infrastructure topics.
 
 ## Current Backend State
 
-The local backend currently follows:
+The local backend follows:
 
 ```text
 Client
@@ -176,12 +253,9 @@ PostgreSQL
 
 Database schema is managed by Flyway migrations.
 
-Current migrations:
+The database password is supplied through the `DB_PASSWORD` environment variable and is not stored in `application.properties`.
 
-```text
-V1__create_races_table.sql
-V2__insert_initial_races.sql
-```
+## API
 
 The current API is:
 
@@ -189,9 +263,112 @@ The current API is:
 GET /api/races
 ```
 
-The endpoint reads race data from PostgreSQL.
+Examples:
 
-The database password is supplied through the `DB_PASSWORD` environment variable and is not stored in `application.properties`.
+```http
+GET /api/races
+```
+
+```http
+GET /api/races?search=tatry&distanceFrom=20&distanceTo=80
+```
+
+```http
+GET /api/races?page=0&size=10&sort=distance,desc
+```
+
+The `search` parameter searches:
+
+* `name`
+* `location`
+* `currency`
+* `description`
+* `websiteUrl`
+
+Distance filtering uses:
+
+* `distanceFrom`
+* `distanceTo`
+
+Pagination uses:
+
+* `page`
+* `size`
+
+Sorting uses Spring Data's `sort` parameter, for example:
+
+```text
+sort=distance,desc
+```
+
+The detailed API and implementation knowledge is documented in `KNOWLEDGE.md` and `DECISIONS.md`.
+
+## AWS Direction
+
+No final production AWS architecture has been selected yet.
+
+The project is expected to evolve toward an architecture containing concepts such as:
+
+```text
+User
+  ↓
+DNS / HTTPS
+  ↓
+CloudFront / frontend hosting
+  ↓
+Gateway / Load Balancer
+  ↓
+Backend containers
+  ↓
+Private network
+  ↓
+Managed PostgreSQL
+```
+
+The exact AWS services and network topology will be selected deliberately after learning the underlying concepts.
+
+The project will explicitly evaluate:
+
+* VPC and subnets
+* route tables
+* Internet Gateway
+* NAT
+* Security Groups
+* IAM
+* Load Balancer / API Gateway
+* ECS / containers
+* ECR
+* RDS
+* S3
+* CloudFront
+* Route 53
+* ACM
+* CloudWatch
+* secrets management
+
+## CI/CD Direction
+
+CI/CD has not yet been implemented.
+
+The planned flow is:
+
+```text
+Git push
+   ↓
+GitHub Actions
+   ↓
+validation / tests
+   ↓
+build
+   ↓
+Docker image
+   ↓
+container registry
+   ↓
+deployment to AWS
+```
+
+The exact deployment strategy will be selected after the AWS infrastructure is understood and implemented.
 
 ## Documentation Workflow
 
@@ -230,107 +407,63 @@ Replace entire file
 Save
 ```
 
-## Current API
+## Running Locally
 
-The backend currently exposes:
+### Backend
 
-```http
-GET /api/races
-```
-
-The API is being developed incrementally.
-
-The planned MVP (Minimum Viable Product) functionality is:
-
-* list of races
-* text search
-* distance range filtering
-* pagination
-
-### Search
-
-The `search` parameter searches only String fields:
-
-* `name`
-* `location`
-* `currency`
-* `description`
-* `websiteUrl`
-
-It does not search numerical or date fields.
-
-### Distance filtering
-
-Distance is filtered separately using:
-
-* `distanceFrom`
-* `distanceTo`
-
-Example:
-
-```http
-GET /api/races?search=tatry&distanceFrom=20&distanceTo=50&page=1&size=20
-```
-
-The detailed API semantics are documented in `KNOWLEDGE.md` and `DECISIONS.md`.
-
-## Running the Backend
-
-### Requirements
+Requirements:
 
 * Java 21
-* Maven
 * PostgreSQL
-* `DB_PASSWORD` environment variable configured for the local PostgreSQL user
+* `DB_PASSWORD` configured
 
-The project includes Maven Wrapper, so Maven does not need to be installed separately.
-
-### Windows
-
-Run:
+Windows:
 
 ```bash
+cd C:\DyskD\aws-learning-repos\trail-races-backend
 .\mvnw.cmd spring-boot:run
 ```
 
-### macOS / Linux
-
-Run:
-
-```bash
-./mvnw spring-boot:run
-```
-
-The application starts on:
+The backend starts on:
 
 ```text
 http://localhost:8080
 ```
 
-### Build
+### Frontend
 
 Windows:
 
 ```bash
-.\mvnw.cmd clean package
+cd C:\DyskD\aws-learning-repos\trail-races-frontend
+npm start
 ```
 
-macOS / Linux:
+The frontend starts on:
 
-```bash
-./mvnw clean package
+```text
+http://localhost:4200
 ```
 
-### Tests
+Open:
 
-Windows:
-
-```bash
-.\mvnw.cmd test
+```text
+http://localhost:4200/races
 ```
 
-macOS / Linux:
+## Current Next Step
 
-```bash
-./mvnw test
-```
+The frontend baseline is complete for the current learning goal.
+
+The next implementation stage is **Docker and containerization**.
+
+The first target is to package the backend and PostgreSQL development environment in a reproducible way and understand:
+
+* images
+* containers
+* Dockerfile
+* container networking
+* environment configuration
+* Docker Compose
+
+After Docker, the project will move into AWS networking and infrastructure.
