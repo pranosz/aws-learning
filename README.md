@@ -301,7 +301,9 @@ Sorting uses Spring Data's `sort` parameter, for example:
 sort=distance,desc
 ```
 
-The detailed API and implementation knowledge is documented in `KNOWLEDGE.md` and `DECISIONS.md`.
+Detailed project and implementation knowledge is documented in `KNOWLEDGE.md` and architectural decisions in `DECISIONS.md`.
+
+Topic-specific learning notes belong in `lessons/`, grouped by subject. For example, the explanation of AWS NAT Gateway is in [`lessons/networking/nat-gateway.md`](lessons/networking/nat-gateway.md). Use this structure for focused lessons on individual AWS and engineering concepts rather than accumulating all lesson content in `KNOWLEDGE.md`.
 
 ## AWS Direction
 
@@ -369,6 +371,38 @@ deployment to AWS
 ```
 
 The exact deployment strategy will be selected after the AWS infrastructure is understood and implemented.
+
+## Adding a Topic — Trigger Phrase: "dodaj zagadnienie"
+
+When the user says **"dodaj zagadnienie"**, treat it as an instruction to document the topic just discussed using the repository's lesson-file convention. Do not add the full explanation to `KNOWLEDGE.md` by default.
+
+Follow this workflow:
+
+1. Inspect the current repository before editing anything. Use the latest repository files supplied in the conversation; do not assume a previous ZIP or an earlier file snapshot is still current.
+2. Identify the subject area and place the lesson in the matching `lessons/` subdirectory, for example `lessons/networking/nat-gateway.md`. Use a clear, lowercase, hyphen-separated filename based on the topic.
+3. If a suitable lesson file already exists, update it instead of creating a duplicate. If no suitable category exists, create a meaningful subject directory under `lessons/`.
+4. Write a focused, standalone lesson that preserves the explanation and examples developed in the conversation. Include what the concept is, why it is useful, how it works, a project-specific example, important security or cost considerations, and relevant alternatives or trade-offs when applicable. Do not add unsupported assumptions as if they were established project decisions.
+5. Expand each abbreviation on first use in the lesson. Keep the explanation appropriate to the user's current learning stage and avoid repeating concepts already explained in other lessons unless a short cross-reference is useful.
+6. Update `README.md` only when needed to document this convention or add a useful link/index entry to the new lesson. Do not copy the full lesson into `README.md` or `KNOWLEDGE.md`.
+7. Update `KNOWLEDGE.md` only if the topic establishes durable facts about the actual project implementation. Update `ARCHITECTURE.md` or `DECISIONS.md` only when the topic changes or records the project's architecture or a deliberate decision. Do not change unrelated documentation.
+8. Report exactly which Markdown files changed. For each changed Markdown file, provide its complete current content in a separate standalone Markdown code block, ready to replace the entire file. Never provide only a diff or partial section, and do not include unchanged files.
+9. If the repository was supplied as a ZIP and a modified ZIP is produced, provide a link to the generated ZIP only after verifying that the file exists. Do not claim to have modified a user's local repository directly.
+
+The intended convention is:
+
+```text
+lessons/
+└── <subject>/
+    └── <topic-name>.md
+```
+
+Examples:
+
+* `lessons/networking/nat-gateway.md`
+* `lessons/networking/vpc-and-subnets.md`
+* `lessons/security/security-groups.md`
+
+The phrase **"dodaj zagadnienie"** refers to the topic currently being discussed unless the user specifies a different topic.
 
 ## Documentation Workflow
 
